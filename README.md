@@ -168,7 +168,7 @@ Here is a full list of options that you can use to modify IG28 behavior:
 
 ## Outputs ##
 
-When running Modules A and D back to back this is the output directory structure IG28 produces
+### Modules A and D ### 
 ```
 output_dir
 ├── Combined
@@ -197,14 +197,14 @@ Isoforms.filtered.clean.genes.rpms: Normalized expression values for each sample
 Isoforms.filtered.clean.genes: Isoform groups and gene association
 
 
-#When running Module C as well an additional file#
+### Module C ###
 
 
 Isoforms.filtered.clean.CDS.gtf 
 
 will be added to each directory which adds CDS coordinates to each isoform by either lifting them from the supplied annotation or calling them using TD2
 
-##Single Cell data ##
+## Single Cell data ##
 
 IG28 was designed with full-length cDNA single cell data in mind. 10X, Parse, etc... doesn't really matter. 
 
@@ -223,11 +223,11 @@ Second column should contain 'scRNA' to tell IG28 that this is single cell data 
 In the first line 'flcDNA1' would become the root name for each cell followed by what was in the bam file under the 'CB' tag
 If the bam file has a different tag, just change it in the sample sheet.
  
-#Run Module A to parse and align reads#
+### Run Module A to parse and align reads ###
 
 After you have a properly fomatted sample sheet (.fofn) file, run Module A (-M A) which parse and then uses minimap2 to align the reads.
 
-#Run Module G to generate a genexcell expression matrix
+### Run Module G to generate a genexcell expression matrix ###
 
 
 After Module A finishes, run Module G (-M G) so IG28 calls featureCounts to quantify gene expression counts.
@@ -250,7 +250,7 @@ Cell_ID1	Celltype1
 Cell_ID2	Celltype2
 Cell_ID3	Celltype1
 ```
-#Run Module M to modify IG28 metadata
+### Run Module M to modify IG28 metadata ###
 
 After Module G finishes, and you ran your scRNA workflow of choice and generate a metadata file you can run Module M (-M M) to modify IG28 metadata.
 
@@ -260,7 +260,7 @@ IG28 -p ./ -g gencodeV49.gtf -G hg38.fasta -f scRNA_sampleSheet.fofn -M M -x met
 
 In that way you prepare IG28 to create independent transcriptomes for each cell type in your data. 
 
-#Run Module D and C as you would for bulk data
+### Run Module D and C as you would for bulk data ###
 
 Once the metadata is modified, just run Module D as you would for bulk data. The output will look like this
 
