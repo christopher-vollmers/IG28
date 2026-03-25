@@ -1,0 +1,426 @@
+#!/usr/bin/env python
+# Christopher Vollmers
+# Roger Volden
+
+import sys
+import os
+import argparse
+import mappy as mp
+import time
+from time import localtime, strftime
+import pysam
+PATH = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/utils/'
+sys.path.append(os.path.abspath(PATH))
+
+import ModuleA
+import ModuleD
+import ModuleG
+import ModuleM
+import ModuleC
+
+
+
+VERSION = "v1.0 - I have a bad feeling about this... isoform."
+
+parser = argparse.ArgumentParser(usage='\n\nRunning with default parameters:\n\npython3 IG28 -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads_noAdapters_noPolyA_5->3.fofn\n')
+
+parser.add_argument(
+    '-p', '--path', type=str, help='Directory to put output files into'
+)
+parser.add_argument(
+    '-u', '--upstream_buffer', type=str, default='10',
+    help='''Defines upstream leniency window for
+            polyA and TSS determination (default 10)'''
+)
+parser.add_argument(
+    '-d', '--downstream_buffer', type=str, default='50',
+    help='''Defines downstream leniency window for polyA
+            and TSS determination (default 50)'''
+)
+parser.add_argument(
+    '-g', '--genome_annotation', type=str, default='None',
+    help='''Genome annotation file (gtf).
+            Is used to identify individual annotated splice sites.
+            If -W is set it is also used to white-list annotated polyA sites'''
+)
+parser.add_argument(
+    '-G', '--genome_sequence', type=str, help='Genome file (fasta)'
+)
+parser.add_argument(
+    '-r', '--minimum_ratio', type=str, default='0.001',
+    help='''Proportion of reads that align to a locus
+            required for an isoform (default 0.001)'''
+)
+parser.add_argument('-i', '--minimum_internal_ratio', type=str, default='1')
+parser.add_argument(
+    '-R', '--minimum_reads', type=str, default='5',
+    help='''Minimum number of reads to make an isoform (default 5)'''
+)
+
+parser.add_argument(
+    '-f', '--Consensus_reads', type=str,
+    help='''Fasta/fastq file with R2C2/PacBio consensus reads,
+            can be entered as a single file path,
+            a comma separated list of  file paths,
+            or a path to a file of filenames file (has to end on .fofn) that contains one file path per line and a tab separated sample name'''
+)
+
+parser.add_argument(
+    '-O', '--overhangs', type=str, default='0,40,0,40',
+    help='''Defines bounds for unaligned bases on ends. Format:
+            min5prime,max5prime,min3prime,max3prime (default 0,40,0,40)'''
+)
+parser.add_argument(
+    '-t', '--minimap2_threads', type=str, default='8',
+    help='Number of threads to use when running minimap and consensus calling (default 8)'
+)
+
+parser.add_argument(
+    '-I', '--minimum_isoform_length', type=str, default='200',
+    help='Minimum length in nt of isoforms that will be considered (default 200)'
+)
+parser.add_argument(
+    '-n', '--minimum_feature_count', type=str, default='2',
+    help='''Features (starts,ends, new splice sites) will be considered
+            if they are present in this number of reads (default 2)'''
+)
+parser.add_argument(
+    '-w', '--splice_site_window', type=str, default='1',
+    help='''reads spliced within this number of nucleotides on each side
+            of a splice site will be considered spliced at this site (default 1)'''
+)
+parser.add_argument(
+    '-A', '--Acutoff', type=str, default='0.5',
+    help='''Isoforms with A content of more than this cutoff in a 30nt
+            window surrounding their polyA site will be discarded (default 0.5)'''
+)
+parser.add_argument(
+    '-W', '--white_list_polyA', type=str, default='0',
+    help='''If set, polyA sites that fall within +/-20nt of annotated transcript ends will not be filtered regardless of Acutoff set with -A.
+            Annotated transcript ends will be  taken from annotation file given with -g.
+            Only transcripts having one of the provided comma separated values in the line of their exon features will be used.
+            E.g. setting -W to [SIRV,"basic"] will whitelist spike-in SIRV transcripts and transcripts considered "basic", i.e. high confidence full length, in the gencode annotation.
+            Setting -W to [exon] should include all transcripts in the gtf file.
+            This is feature only checks whether the provided values are in the line, not where they are.
+            That means that setting -W to [chr1] will whitelist all transcripts on chromosome 1 but also transcripts with "chr1" in their name, so it's a bit dangerous'''
+)
+
+parser.add_argument(
+    '-x', '--meta_data', default=False,action='store',
+    help='''meta_data file with two columns: cell and celltype'''
+)
+
+parser.add_argument(
+    '-m', '--multi_exon_only', default='0',action='store_const', const='1',
+    help='''If used, IG28 will filter all single exon isoforms'''
+)
+
+parser.add_argument(
+    '-j', '--junctions', default='gtag,gcag,atac,ctac,ctgc,gtat',action='store',type=str,
+    help='''base context required (in lower-case for either strand) to call unannotated splice junctions (default gtag,gcag,atac,ctac,ctgc,gtat)'''
+)
+
+parser.add_argument(
+    '-M', '--Modules', default='ADC',
+    help='''Defines what modules of IG28 will be run. By default this includes:
+            A - Alignment,
+            D - defining isoforms,
+            C - Adding CDS
+            G - Make single cell gene expression matrix
+            M - Modify meta data (mostly a single cell thing)
+            Each module needs the output of the modules run before it to function properly.
+            Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole pipeline. (default ADC)'''
+)
+
+
+parser.add_argument(
+    '-v', '--version', action='version', version=VERSION,
+    help='Prints IG28 version'
+)
+
+if len(sys.argv) == 1:
+    parser.print_help()
+    sys.exit(0)
+args = parser.parse_args()
+
+path = args.path  # path where you want your output files to go
+comb_path = path +'/Combined/'
+temp_path = comb_path + 'tmp/'
+upstream_buffer = args.upstream_buffer
+downstream_buffer = args.downstream_buffer
+genome_annotation = args.genome_annotation
+genome_sequence = args.genome_sequence
+minimum_ratio = args.minimum_ratio
+minimum_internal_ratio = args.minimum_internal_ratio
+minimum_reads = args.minimum_reads
+fasta_files = args.Consensus_reads
+overhangs = args.overhangs
+minimap2_threads = args.minimap2_threads
+minimum_isoform_length = args.minimum_isoform_length
+window = args.splice_site_window
+feature_count = args.minimum_feature_count
+Acutoff = args.Acutoff
+white_list_polyA=args.white_list_polyA
+multi_exon_only=args.multi_exon_only
+junctions=args.junctions
+Modules=args.Modules
+metaData=args.meta_data
+
+
+IGPath = '/'.join(os.path.realpath(__file__).split('/')[:-1]) + '/'
+
+if '.fofn' in fasta_files:
+    fastaList=[]
+    for line in open(fasta_files):
+        fasta=line.strip()
+        fastaList.append(fasta)
+else:
+    print('input file has to be a .fofn file')
+
+
+if not os.path.isdir(path):
+    os.system(f'mkdir {path}')
+    command=open(path+'/IG28.log','w')
+else:
+    command=open(path+'/IG28.log','a')
+
+command.write('\nIG28 "'+ VERSION +'" was run on '\
+               + strftime("%Y-%m-%d %H:%M:%S", localtime())+'\n'\
+               + 'with the following parameters\n'\
+               + str(args).replace('Namespace(','').replace(')','') + '\n')
+command.close()
+if not os.path.isdir(comb_path):
+    os.system(f'mkdir {comb_path}')
+if not os.path.isdir(temp_path):
+    os.system(f'mkdir {temp_path}')
+
+minimap2 = 'minimap2'
+featureCounts = 'featureCounts'
+samtools = 'samtools'
+python=sys.executable
+
+
+
+print('\n----------------------------------------------------------------\
+       \nIG28 - Isoform Generation - Quantification - Annotation \
+       \nVersion -', VERSION,'\
+       \n----------------------------------------------------------------\n')
+
+
+
+sam_file = f'{temp_path}/mm2Alignments.sam'
+bam_file = f'{temp_path}/mm2Alignments.sorted.bam'
+featurecounts_out = f'{temp_path}/featureCounts.out'
+core_file = f'{bam_file}.featureCounts'
+gene_counts_tsv = f'{temp_path}/gene_cell_counts.tsv'
+fastaInfo=f'{temp_path}/fastaFiles.info'
+
+if 'A' in Modules:
+    print('\n----------------------------\
+           \n    Module A - Alignment\
+           \n----------------------------\n')
+    tempFasta=f'{temp_path}/Combined.fasta'
+    print('\tchecking input fastx/bam files')
+    reads=False
+    print(f'\tcombining {len(fastaList)} input fastx/bam files')
+    out=open(tempFasta,'w')
+    outInfo=open(fastaInfo,'w')
+    fileCounter=0
+    for fasta in fastaList:
+        reads=ModuleA.parseFile(fasta,out,outInfo,reads)
+
+    out.close()
+    outInfo.close()
+    if reads:
+        os.system(f'{minimap2} -G 400k --secondary=no -ax splice:hq --cs=long -uf -t {minimap2_threads} {genome_sequence} {tempFasta} > {sam_file}') 
+        os.system(f'{samtools} sort -@ 10 -m 5G {sam_file} > {bam_file}')
+        os.system(f'{samtools} index {bam_file}')
+        os.system(f'rm {sam_file}')
+    else:
+        print('\t no reads were provided. Alignment will not be performed')
+
+
+
+if 'G' in Modules:
+    print('\n----------------------------------------\
+           \n      Module G - Creating GenexCell Matrix\
+           \n----------------------------------------\n')
+    everything_present=False
+
+    if os.path.exists(bam_file) and os.path.getsize(bam_file)>0:
+        everything_present=True
+
+    if everything_present:
+        os.system(f'{featureCounts} -L -t exon -a {genome_annotation} -s 0 -T {minimap2_threads} -R CORE -o {featurecounts_out} {bam_file} --minOverlap 50')
+        ModuleG.gene_cell_counts(core_file, gene_counts_tsv)
+
+
+if 'M' in Modules:
+    everything_present=False
+
+    if os.path.exists(metaData) and os.path.getsize(metaData)>0:
+        everything_present=True
+
+
+    ModuleM.modifyMetaData(bam_file,fastaInfo,metaData)
+    os.system(f'{samtools} index {bam_file}')
+
+if 'D' in Modules:
+    print('\n----------------------------------------\
+           \n      Module D - defining isoforms\
+           \n----------------------------------------\n')
+    everything_present=False
+
+    if os.path.exists(bam_file) and os.path.getsize(bam_file)>0:
+        everything_present=True
+
+    if everything_present:
+        tissueSet=set()
+        for line in open(fastaInfo):
+            a=line.strip().split('\t')
+            tissue=a[2]
+            tissueSet.add(tissue)
+        tissueList=sorted(list(tissueSet))
+
+        if len(tissueList)==1:
+            tissueList=[]
+        else:
+            for tissue in tissueList:
+                os.system(f'mkdir {path}/{tissue}') 
+                os.system(f'mkdir {path}/{tissue}/tmp')
+            print(f'\tSplitting read alignments by tissue/cell type')
+#            ModuleD.split_files_into_tissues(path,tissueList,bam_file,fastaInfo)
+
+        tissueList.append('Combined')
+
+#        tissueList=['Combined']
+
+        for tissue in tissueList:
+            print(f'\tCalling isoforms for: {tissue}')
+            tissue_path=f'{path}/{tissue}/'
+            tissue_temp_path=f'{tissue_path}tmp/'
+
+            locus_dir=f'{tissue_temp_path}tmp_SS/'
+            if os.path.isdir(locus_dir):
+                os.system(f'rm -r {locus_dir}')
+            os.system(f'mkdir {locus_dir}')
+
+            if tissue != 'Combined':
+                os.system(f'samtools index {tissue_temp_path}/mm2Alignments.sorted.bam')
+
+            ModuleD.get_loci(f'{tissue_temp_path}/mm2Alignments.sorted.bam',locus_dir,minimum_reads,int(minimap2_threads))
+
+            coord_file=f'{tissue_temp_path}Isoform_Coordinates.tsv'
+            out=open(coord_file,'w')
+            out_filter=open(f'{tissue_temp_path}filter_reasons.txt','w')
+            out_r2i=open(f'{tissue_temp_path}reads2isoforms.txt','w')
+            out_i2s=open(f'{tissue_temp_path}/Isoforms.filtered.clean.quant','w')
+            out_i2sn=open(f'{tissue_temp_path}/Isoforms.filtered.clean.rpms','w')
+            out_i2l=open(f'{tissue_temp_path}isoform2locus.txt','w')
+            samples=set()
+            for line in open(f'{tissue_temp_path}/fastaFiles.info'):
+                a=line.strip().split('\t')
+                sample=a[1]
+                samples.add(sample)
+            sampleList=sorted(list(samples))
+            sampleString='\t'.join(sampleList)
+            out_i2s.write(f'Isoform\t{sampleString}\n')
+            out_i2sn.write(f'Isoform\t{sampleString}\n')
+
+            out.close()
+            out_r2i.close()
+            out_i2s.close()
+            out_i2sn.close()
+            out_i2l.close()
+            out_filter.close()
+
+            print('reading genome')
+            genome_seq=ModuleD.read_fasta(genome_sequence)
+            print('retrieving loci')
+            roots=ModuleD.get_parsed_files(locus_dir)
+
+            rootNumber=len(roots)
+            batchSize=int(rootNumber/10)
+
+            steps=set()
+            for step in range(batchSize,rootNumber-batchSize,batchSize):
+                steps.add(step)
+            steps.add(rootNumber)
+
+            print(f'\tA total of {rootNumber} loci are split into batches of {batchSize:,} for analysis')
+
+            sub_roots=f'{tissue_temp_path}/temp_roots.txt'
+            out_sub=open(sub_roots,'w')
+            root_counter=0
+            root_total=0
+            for root in sorted(roots, key=lambda x : (x.split('~')[0],int(x.split('~')[2]))):
+                chrom,direction,start,end=root.split('~')
+#              if 'chrM' in chrom:
+                start, end = int(start), int(end)
+#                print(root,chrom,start,end)
+                root_counter+=1
+                root_total+=1
+                out_sub.write(f'{root}\t{genome_seq[chrom][start:end]}\n')
+                if root_counter in steps:
+                    print(f'\tstarting batch {root_counter}')
+                    out_sub.close()
+                    os.system(
+                        f'{python} {IGPath}/defineIsoforms.py \
+                            -r {sub_roots} -p {tissue_temp_path} -g {genome_annotation} \
+                            -w {window} -m {feature_count} -W {white_list_polyA} -n {minimap2_threads} \
+                            -j {junctions} -u {upstream_buffer} -d {downstream_buffer} \
+                            -M {minimum_reads} -ir {minimum_internal_ratio} -mr {minimum_ratio} \
+                            -O {overhangs} -A {Acutoff} -I {minimum_isoform_length} -meo {multi_exon_only}'# 2>{temp_path}/filter_reasons.txt'
+                    )
+                    out_sub=open(sub_roots,'w')
+                    print(f'\tfinished a total of {root_total:,} loci')
+
+            del genome_seq
+
+            sorted_coord_file = f'{tissue_temp_path}Isoform_Coordinates.sorted.tsv'
+
+            os.system(f'sort -T {tissue_path} -k 2,2 -k 7,7n {coord_file} > {sorted_coord_file}')
+
+            print('\tgrouping isoforms, assigning them to genes (if annotation is provided), and creating gtf')
+            os.system(f'{python} {IGPath}/groupIsoforms.py -p {tissue_temp_path} -g {genome_annotation}')
+            os.system(f'scp {tissue_temp_path}/Isoforms.filtered.* {tissue_path}')
+
+    else:
+        print('\tone or more input files missing or empty. Isoforms not defined')
+
+
+if 'C' in Modules:
+    print('\n----------------------------------------\
+           \n      Module C - Adding CDS to Isoforms\
+           \n----------------------------------------\n')
+
+
+
+    tissueSet=set()
+    for line in open(fastaInfo):
+        a=line.strip().split('\t')
+        tissue=a[2]
+        tissueSet.add(tissue)
+    tissueList=sorted(list(tissueSet))
+
+    if len(tissueList)==1:
+        tissueList=[]
+    tissueList.append('Combined')
+
+
+    for tissue in tissueList:
+        print(f'Processing: {tissue}')
+        tissue_path=f'{path}/{tissue}/'
+        tissue_temp_path=f'{tissue_path}tmp/'
+
+        everything_present=False
+        isoforms_gtf=f'{tissue_temp_path}/Isoforms.filtered.clean.gtf'
+        if os.path.exists(isoforms_gtf) and os.path.getsize(isoforms_gtf)>0:
+            everything_present=True
+        if everything_present:
+            reference_corrected_isoforms = 'Isoforms.filtered.reference_corrected.fasta'
+            ModuleC.reference_correct_isoform_sequences(isoforms_gtf,genome_sequence, f'{tissue_temp_path}/{reference_corrected_isoforms}')
+            ModuleC.add_cds(isoforms_gtf,reference_corrected_isoforms,genome_annotation,f'{tissue_temp_path}/Isoforms.filtered.clean.CDS.gtf',f'{tissue_temp_path}',white_list_polyA.split(','))
+            os.system(f'scp {tissue_temp_path}/Isoforms.filtered.clean.CDS.gtf {tissue_path}')
+
+
