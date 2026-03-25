@@ -289,7 +289,7 @@ if 'D' in Modules:
                 os.system(f'mkdir {path}/{tissue}') 
                 os.system(f'mkdir {path}/{tissue}/tmp')
             print(f'\tSplitting read alignments by tissue/cell type')
-#            ModuleD.split_files_into_tissues(path,tissueList,bam_file,fastaInfo)
+            ModuleD.split_files_into_tissues(path,tissueList,bam_file,fastaInfo)
 
         tissueList.append('Combined')
 
@@ -355,9 +355,7 @@ if 'D' in Modules:
             root_total=0
             for root in sorted(roots, key=lambda x : (x.split('~')[0],int(x.split('~')[2]))):
                 chrom,direction,start,end=root.split('~')
-#              if 'chrM' in chrom:
                 start, end = int(start), int(end)
-#                print(root,chrom,start,end)
                 root_counter+=1
                 root_total+=1
                 out_sub.write(f'{root}\t{genome_seq[chrom][start:end]}\n')
