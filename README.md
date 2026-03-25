@@ -169,7 +169,7 @@ Here is a full list of options that you can use to modify IG28 behavior:
 ## Outputs ##
 
 When running Modules A and D back to back this is the output directory structure IG28 produces
-
+```
 output_dir
 ├── Combined
 │   ├── Isoforms.filtered.clean.gtf
@@ -183,6 +183,8 @@ output_dir
     ├── Isoforms.filtered.clean.gtf
     ├── Isoforms.filtered.clean.genes.quant
     └── Isoforms.filtered.clean.genes.rpms
+```
+
 
 For each tissue and all data combined, IG28 will generate the following output files in their respective output directories
 
@@ -262,6 +264,7 @@ In that way you prepare IG28 to create independent transcriptomes for each cell 
 
 Once the metadata is modified, just run Module D as you would for bulk data. The output will look like this
 
+```
 output_dir
 ├── Combined
 │   ├── Isoforms.filtered.clean.gtf
@@ -275,6 +278,8 @@ output_dir
     ├── Isoforms.filtered.clean.gtf
     ├── Isoforms.filtered.clean.genes.quant
     └── Isoforms.filtered.clean.genes.rpms
+```
+
 
 The quant and rpms files will contain quantifications for every single cell.
 
