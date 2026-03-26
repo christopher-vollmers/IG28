@@ -132,7 +132,7 @@ def process_locus(out_tmp,root,chrom,left_bounds_chrom, right_bounds_chrom,start
 
     if verbose:
         print(f'\t\t\t\tstarted filtering {len(seqDict)} isoforms for locus {chrom} {start} {end}')
-    psl_dict, isoform_list,filter_reasons,filtered_isoforms = ModuleD.parse_seqDict(seqDict,minimum_isoform_length,minimum_read_count,overhangs,multi_exon_only,filter_reasons)
+    psl_dict, isoform_list,filtered_isoforms = ModuleD.parse_seqDict(seqDict,minimum_isoform_length,minimum_read_count,overhangs,multi_exon_only)
 
     del seqDict
 
@@ -142,13 +142,15 @@ def process_locus(out_tmp,root,chrom,left_bounds_chrom, right_bounds_chrom,start
 
     if verbose:
         print(f'\t\t\t\t\tfiltering isoforms for relative read coverage starting with', len(isoform_list), f'isoforms for locus {chrom} {start} {end}')
-    isoform_list,filter_reasons,filtered_isoforms = ModuleD.filter_isoforms(count, isoform_list, chrom, psl_dict, minimum_ratio,filter_reasons)
+    isoform_list,filtered_isoforms = ModuleD.filter_isoforms(count, isoform_list, chrom, psl_dict, minimum_ratio)
     for filtered_isoform in filtered_isoforms:
         psl_dict.pop(filtered_isoform)
 
+    del count
+
     if verbose:
         print(f'\t\t\t\t\tfinding fully contained isoforms in', len(isoform_list), f'remaining isoforms for locus {chrom} {start} {end}')
-    isoform_list,filter_reasons,filtered_isoforms = ModuleD.look_for_contained_isoforms(isoform_list, chrom, psl_dict, locus_sequence,WhiteList,start,splice_site_width,Acutoff,internal_ratio,downstream_buffer,filter_reasons)
+    isoform_list,filtered_isoforms = ModuleD.look_for_contained_isoforms(isoform_list, chrom, psl_dict, locus_sequence,WhiteList,start,splice_site_width,Acutoff,internal_ratio,downstream_buffer)
     for filtered_isoform in filtered_isoforms:
         psl_dict.pop(filtered_isoform)
 
@@ -160,14 +162,13 @@ def process_locus(out_tmp,root,chrom,left_bounds_chrom, right_bounds_chrom,start
 #        obj_counter+=1
 
 
-    IsoData={}
     counter=0
     if len(isoform_list)>0:
         out_coords=open(f'{out_path_coord}/{root}.coords','w')
         out_counts=open(f'{out_path_coord}/{root}.counts','w')
         for isoform in isoform_list:
             counter+=1
-            info = psl_dict[isoform]
+            info = psl_dict.pop(isoform)
             coordinates = info[0]
             dir=info[1]
             abundance=info[4]
@@ -185,6 +186,9 @@ def process_locus(out_tmp,root,chrom,left_bounds_chrom, right_bounds_chrom,start
             out_counts.write('\n')
         out_coords.close()
         out_counts.close()
+
+    del psl_dict
+
 
 def main():
 
@@ -266,7 +270,6 @@ def main():
         print(f'\t\tloading locus {locus_counter:,} -- {root}',' '*20,end='\r')
 
 
-    print(f'\n\t\t{len(results):,} loci submitted for mutlithreading')
     pool.close()
     pool.join()
 

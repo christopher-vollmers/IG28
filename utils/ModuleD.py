@@ -1141,7 +1141,7 @@ def revComp(seq):
     return ''.join([bases[x] for x in list(seq)])[::-1]
 
 
-def parse_seqDict(seqDict,minimum_isoform_length,minimum_reads,overhangs,multi_exon_only,filter_reasons):
+def parse_seqDict(seqDict,minimum_isoform_length,minimum_reads,overhangs,multi_exon_only):
 
     psl_dict = {}
     psl_info = {}
@@ -1202,7 +1202,7 @@ def parse_seqDict(seqDict,minimum_isoform_length,minimum_reads,overhangs,multi_e
         else:
             filtered_isoforms.append(isoform)
 
-    return psl_dict, set(isoform_list),filter_reasons,filtered_isoforms
+    return psl_dict, set(isoform_list),filtered_isoforms
 
 def read_fasta(inFile):
     '''Reads in FASTA files, returns a dict of header:sequence'''
@@ -1212,7 +1212,7 @@ def read_fasta(inFile):
     return readDict
 
 
-def filter_isoforms(count, isoform_names, chromosome, psl_dict, minimum_ratio,filter_reasons):
+def filter_isoforms(count, isoform_names, chromosome, psl_dict, minimum_ratio):
     filtered_isoforms = []
     discard_isoforms = []
     for isoform in sorted(isoform_names):
@@ -1229,18 +1229,12 @@ def filter_isoforms(count, isoform_names, chromosome, psl_dict, minimum_ratio,fi
         if (number / max_coverage) >= minimum_ratio:
             filtered_isoforms.append(isoform)
         else:
-            filter_reasons.append(
-                isoform + ' filtered because it at ' + str(number)
-                + ' reads it only reached a ' + str(number / max_coverage)
-                + ' ratio of expression in its locus which is below the minimum ratio of '
-                + str(minimum_ratio) + '\n'
-            )
             discard_isoforms.append(isoform)
-    return filtered_isoforms,filter_reasons,discard_isoforms
+    return filtered_isoforms,discard_isoforms
 
 
 
-def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, chr_sequence,polyAWhiteList,target_start,sw,Acutoff,internal_ratio,downstream_buffer,filter_reasons):
+def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, chr_sequence,polyAWhiteList,target_start,sw,Acutoff,internal_ratio,downstream_buffer):
     filtered_isoforms = []
     discard_isoforms = []
     bases_dict={}
@@ -1294,21 +1288,7 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, chr_sequence
 
             for overhanging_isoform,overhang_bases in overhangDict.items():
                 if overhang_bases>=2:
-                    if polyApos in polyAWhiteList[direction]:
-                        filter_reasons.append(
-                        isoform + ' would have been filtered because at least one isoform (including '
-                        + overhanging_isoform
-                        + ') is extending beyond its polyA site and the genomic A content at its putative polyA site is '
-                        + str(Acontent) + ' which is higher than the cutoff set to ' + str(Acutoff)
-                        + 'but it was kept because its polyA site was part of the polyA site whitelist\n'
-                        )
-                    else:
-                        filter_reasons.append(
-                        isoform + ' filtered because at least one isoform (including '
-                        + overhanging_isoform
-                        + ') is extending beyond its polyA site and the genomic A content at its putative polyA site is '
-                        + str(Acontent) + ' which is higher than the cutoff set to ' + str(Acutoff) + '\n'
-                        )
+                    if polyApos not in polyAWhiteList[direction]:
                         decision=False
                         break
 
@@ -1333,23 +1313,15 @@ def look_for_contained_isoforms(isoform_list, chromosome, psl_dict, chr_sequence
                                             compare_bases2.add(base)
 
                                 if compare_bases == compare_bases2:
-                                        filter_reasons.append(
-                                            isoform
-                                            + ' filtered because it is internal to (all bases and splice junctions contained in) '
-                                            + isoform2 + ' and expressed at ' + str(abundance) + ' reads compared to '
-                                            + str(abundance2)
-                                            + ' reads for the isoform containing it which is below that internal ratio of '
-                                            + str(internal_ratio) + '\n'
-                                            )
-                                        decision=False
-                                        break
+                                    decision=False
+                                    break
 
         if  decision==True:
             filtered_isoforms.append(isoform)
         else:
             discard_isoforms.append(isoform)
 
-    return filtered_isoforms, filter_reasons,discard_isoforms
+    return filtered_isoforms,discard_isoforms
 
 def readWhiteList(polyA,root):
 

@@ -286,8 +286,9 @@ if 'D' in Modules:
             tissueList=[]
         else:
             for tissue in tissueList:
-                os.system(f'mkdir {path}/{tissue}') 
-                os.system(f'mkdir {path}/{tissue}/tmp')
+                if not os.path.isdir(f'{path}/{tissue}'):
+                    os.system(f'mkdir {path}/{tissue}') 
+                    os.system(f'mkdir {path}/{tissue}/tmp')
             print(f'\tSplitting read alignments by tissue/cell type')
             ModuleD.split_files_into_tissues(path,tissueList,bam_file,fastaInfo)
 
@@ -296,7 +297,7 @@ if 'D' in Modules:
 #        tissueList=['Combined']
 
         for tissue in tissueList:
-            print(f'\tCalling isoforms for: {tissue}')
+            print(f'\n\tCalling isoforms for: {tissue}')
             tissue_path=f'{path}/{tissue}/'
             tissue_temp_path=f'{tissue_path}tmp/'
 
@@ -371,7 +372,7 @@ if 'D' in Modules:
                             -O {overhangs} -A {Acutoff} -I {minimum_isoform_length} -meo {multi_exon_only}'# 2>{temp_path}/filter_reasons.txt'
                     )
                     out_sub=open(sub_roots,'w')
-                    print(f'\tfinished a total of {root_total:,} loci')
+                    print(f'\n\tfinished a total of {root_total:,} loci')
 
             del genome_seq
 
@@ -404,7 +405,6 @@ if 'C' in Modules:
     if len(tissueList)==1:
         tissueList=[]
     tissueList.append('Combined')
-
 
     for tissue in tissueList:
         print(f'Processing: {tissue}')
