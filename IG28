@@ -47,9 +47,9 @@ parser.add_argument(
     '-G', '--genome_sequence', type=str, help='Genome file (fasta)'
 )
 parser.add_argument(
-    '-r', '--minimum_ratio', type=str, default='0.001',
+    '-r', '--minimum_ratio', type=str, default='0.01',
     help='''Proportion of reads that align to a locus
-            required for an isoform (default 0.001)'''
+            required for an isoform (default 0.01)'''
 )
 parser.add_argument('-i', '--minimum_internal_ratio', type=str, default='1')
 parser.add_argument(
@@ -252,6 +252,7 @@ if 'G' in Modules:
 
     if everything_present:
         os.system(f'{featureCounts} -L -t exon -a {genome_annotation} -s 0 -T {minimap2_threads} -R CORE -o {featurecounts_out} {bam_file} --minOverlap 50')
+        print('parsing featureCounts output')
         ModuleG.gene_cell_counts(core_file, gene_counts_tsv)
 
 

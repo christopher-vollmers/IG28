@@ -61,6 +61,8 @@ def read_annotation(genome_annotation):
                     if element == 'exon':
                         if 'gene_name' in a[8]:
                             gene_name+='~'+a[8].split('gene_name "')[1].split('"')[0]
+                        else:
+                            gene_name+='~'+gene_name
                         if gene_name not in geneDict[direction]:
                             geneDict[direction][gene_name]=[chromosome,set()]
                         geneDict[direction][gene_name][1].add((left,right))

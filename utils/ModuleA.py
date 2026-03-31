@@ -24,7 +24,7 @@ def parseFile(fasta,out,outInfo,reads):
         use_file=True
     if use_file:
         reads=True
-        if fasta.endswith('fasta') or fasta.endswith('fastq'):
+        if fasta.endswith('fasta') or fasta.endswith('fastq') or fasta.endswith('fastq.gz') or fasta.endswith('fasta.gz'):
             readCounter=0
             for name,seq,qual in mp.fastx_read(fasta):
                 readCounter+=1
