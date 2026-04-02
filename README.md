@@ -1,4 +1,5 @@
-# IG28 #
+<img width="15076" height="5641" alt="Image" src="https://github.com/user-attachments/assets/43717492-a7f3-49bd-bf5c-39db297f279b" />
+
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 
 
