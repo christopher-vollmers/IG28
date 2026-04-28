@@ -5,7 +5,7 @@
 
 v1.0 - I have a bad feeling... about this isoform
 
-IG28 high accuracy full-length cDNA reads produced by ONT/R2C2 and/or PacBio/Kinnex in fasta/fastq/bam formats and identifies and quantifies high confidence isoforms.
+IG28 parses high accuracy full-length cDNA reads produced by ONT/R2C2 and/or PacBio/Kinnex in fasta/fastq/bam formats and identifies and quantifies high confidence isoforms.
 You can mix and match R2C2/PacBio reads.
 
 IG28 has not been tested for use with regular ONT cDNA reads. You can certainly try though!
