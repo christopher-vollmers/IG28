@@ -137,7 +137,7 @@ Here is a full list of options that you can use to modify IG28 behavior:
   -R MINIMUM_READS, --minimum_reads MINIMUM_READS
                         Minimum number of reads to make an isoform (default 5)
   -f CONSENSUS_READS, --Consensus_reads CONSENSUS_READS
-                        Fasta/fastq file with R2C2/PacBio consensus reads, can be entered as a single file path, a comma separated list of file paths, or a path to a file of filenames file (has to end on .fofn) that contains one file path
+                        .fofn file in the format described in the README. Contains paths to Fasta/fastq file with full-length cDNA reads and their metadata
                         per line and a tab separated sample name
   -O OVERHANGS, --overhangs OVERHANGS
                         Defines bounds for unaligned bases on ends. Format: min5prime,max5prime,min3prime,max3prime (default 0,40,0,40)
