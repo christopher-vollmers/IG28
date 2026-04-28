@@ -61,17 +61,20 @@ chmod +x IG28
 You will need to install the following python3 libraries. If your python3 is <=3.6 you might be in trouble because of f-string formatting and 
 fifo stuff that later version of python3 do that we might have inadvertendly relied on.  
 
+```bash
 numpy
 pysam
 mappy
+```
 
 You will also need to install 
 
+```bash
 minimap2
 samtools
 featureCounts (if using Module G for doing single cell analysis)
 TD2 (if you want to add CDS coordinates to your gtf output)
-
+```
 
 in your PATH. 
 
