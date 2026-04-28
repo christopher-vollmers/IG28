@@ -336,9 +336,9 @@ if 'D' in Modules:
             out_i2l.close()
             out_filter.close()
 
-            print('reading genome')
+            print(\t'reading genome')
             genome_seq=ModuleD.read_fasta(genome_sequence)
-            print('retrieving loci')
+            print('\tretrieving loci')
             roots=ModuleD.get_parsed_files(locus_dir)
 
             rootNumber=len(roots)
@@ -349,7 +349,7 @@ if 'D' in Modules:
                 steps.add(step)
             steps.add(rootNumber)
 
-            print(f'\tA total of {rootNumber} loci are split into batches of {batchSize:,} for analysis')
+            print(f'\tA total of {rootNumber:,} loci are split into batches of {batchSize:,} for analysis')
 
             sub_roots=f'{tissue_temp_path}/temp_roots.txt'
             out_sub=open(sub_roots,'w')
