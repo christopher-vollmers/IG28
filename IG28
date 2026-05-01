@@ -333,7 +333,7 @@ if 'D' in Modules:
             out_i2l.close()
             out_filter.close()
 
-            print(\t'reading genome')
+            print('\treading genome')
             genome_seq=ModuleD.read_fasta(genome_sequence)
             print('\tretrieving loci')
             roots=ModuleD.get_parsed_files(locus_dir)
