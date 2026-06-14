@@ -1,4 +1,4 @@
-<img width="15076" height="5641" alt="Image" src="https://github.com/user-attachments/assets/43717492-a7f3-49bd-bf5c-39db297f279b" />
+<img width="2466" height="924" alt="Image" src="https://github.com/user-attachments/assets/6db124da-181f-4798-86d1-88242be2b6c8" />
 
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](http://perso.crans.org/besson/LICENSE.html)
 [![version](https://img.shields.io/github/v/release/christopher-vollmers/IG28?label=version)](https://github.com/christopher-vollmers/IG28/releases)
