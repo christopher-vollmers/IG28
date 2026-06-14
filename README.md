@@ -5,7 +5,7 @@
 
 v1.0 - I have a bad feeling... about this isoform
 
-IG28 replaces Mandalorion for isoform identification and quantification. While IG28 produces isoforms that are similar to Mandalorion, it is much faster, uses far less RAM, and can be used to produce data sets with over 1 billion fl-cDNA reads. 
+IG28 replaces Mandalorion for isoform identification and quantification. While IG28 produces isoforms that are similar to Mandalorion, it is much faster, uses far less RAM, and can be used to process data sets with over 1 billion fl-cDNA reads. 
 IG28 can process both bulk and single cell fl-cDNA datasets. It parses high accuracy full-length cDNA reads produced by ONT/R2C2 and/or PacBio/Kinnex in fasta/fastq/bam formats and identifies and quantifies high confidence isoforms.
 You can mix and match R2C2/PacBio reads.
 
