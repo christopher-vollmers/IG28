@@ -291,7 +291,7 @@ if 'D' in Modules:
             ModuleD.split_files_into_tissues(path,tissueList,bam_file,fastaInfo)
 
         tissueList.append('Combined')
-
+        tissueList=tissueList[::-1]
 #        tissueList=['Combined']
 
         for tissue in tissueList:
@@ -333,54 +333,58 @@ if 'D' in Modules:
             out_i2l.close()
             out_filter.close()
 
-            print('\treading genome')
+            print('\n\treading genome')
             genome_seq=ModuleD.read_fasta(genome_sequence)
             print('\tretrieving loci')
             roots=ModuleD.get_parsed_files(locus_dir)
 
             rootNumber=len(roots)
-            batchSize=int(rootNumber/10)
+            if rootNumber==0:
+                print('\tno loci found. Isoforms not defined')
+            else:
+                batchSize=int(rootNumber/10)
 
-            steps=set()
-            for step in range(batchSize,rootNumber-batchSize,batchSize):
-                steps.add(step)
-            steps.add(rootNumber)
+                steps=set()
+                if batchSize > 0:
+                    for step in range(batchSize,rootNumber-batchSize,batchSize):
+                        steps.add(step)
+                steps.add(rootNumber)
 
-            print(f'\tA total of {rootNumber:,} loci are split into batches of {batchSize:,} for analysis')
+                print(f'\tA total of {rootNumber:,} loci are split into batches of {batchSize:,} for analysis')
 
-            sub_roots=f'{tissue_temp_path}/temp_roots.txt'
-            out_sub=open(sub_roots,'w')
-            root_counter=0
-            root_total=0
-            for root in sorted(roots, key=lambda x : (x.split('~')[0],int(x.split('~')[2]))):
-                chrom,direction,start,end=root.split('~')
-                start, end = int(start), int(end)
-                root_counter+=1
-                root_total+=1
-                out_sub.write(f'{root}\t{genome_seq[chrom][start:end]}\n')
-                if root_counter in steps:
-                    print(f'\tstarting batch {root_counter}')
-                    out_sub.close()
-                    os.system(
-                        f'{python} {IGPath}/defineIsoforms.py \
-                            -r {sub_roots} -p {tissue_temp_path} -g {genome_annotation} \
-                            -w {window} -m {feature_count} -W {white_list_polyA} -n {minimap2_threads} \
-                            -j {junctions} -u {upstream_buffer} -d {downstream_buffer} \
-                            -M {minimum_reads} -ir {minimum_internal_ratio} -mr {minimum_ratio} \
-                            -O {overhangs} -A {Acutoff} -I {minimum_isoform_length} -meo {multi_exon_only}'# 2>{temp_path}/filter_reasons.txt'
-                    )
-                    out_sub=open(sub_roots,'w')
-                    print(f'\n\tfinished a total of {root_total:,} loci')
+                sub_roots=f'{tissue_temp_path}/temp_roots.txt'
+                out_sub=open(sub_roots,'w')
+                root_counter=0
+                root_total=0
+                for root in sorted(roots, key=lambda x : (x.split('~')[0],int(x.split('~')[2]))):
+                    chrom,direction,start,end=root.split('~')
+                    start, end = int(start), int(end)
+                    root_counter+=1
+                    root_total+=1
+                    out_sub.write(f'{root}\t{genome_seq[chrom][start:end]}\n')
+                    if root_counter in steps:
+                        print(f'\tstarting batch {root_counter}')
+                        out_sub.close()
+                        os.system(
+                            f'{python} {IGPath}/defineIsoforms.py \
+                                -r {sub_roots} -p {tissue_temp_path} -g {genome_annotation} \
+                                -w {window} -m {feature_count} -W {white_list_polyA} -n {minimap2_threads} \
+                                -j {junctions} -u {upstream_buffer} -d {downstream_buffer} \
+                                -M {minimum_reads} -ir {minimum_internal_ratio} -mr {minimum_ratio} \
+                                -O {overhangs} -A {Acutoff} -I {minimum_isoform_length} -meo {multi_exon_only}'# 2>{temp_path}/filter_reasons.txt'
+                        )
+                        out_sub=open(sub_roots,'w')
+                        print(f'\n\tfinished a total of {root_total:,} loci')
 
-            del genome_seq
+                del genome_seq
 
-            sorted_coord_file = f'{tissue_temp_path}Isoform_Coordinates.sorted.tsv'
+                sorted_coord_file = f'{tissue_temp_path}Isoform_Coordinates.sorted.tsv'
 
-            os.system(f'sort -T {tissue_path} -k 2,2 -k 7,7n {coord_file} > {sorted_coord_file}')
+                os.system(f'sort -T {tissue_path} -k 2,2 -k 7,7n {coord_file} > {sorted_coord_file}')
 
-            print('\tgrouping isoforms, assigning them to genes (if annotation is provided), and creating gtf')
-            os.system(f'{python} {IGPath}/groupIsoforms.py -p {tissue_temp_path} -g {genome_annotation}')
-            os.system(f'scp {tissue_temp_path}/Isoforms.filtered.* {tissue_path}')
+                print('\tgrouping isoforms, assigning them to genes (if annotation is provided), and creating gtf')
+                os.system(f'{python} {IGPath}/groupIsoforms.py -p {tissue_temp_path} -g {genome_annotation}')
+                os.system(f'scp {tissue_temp_path}/Isoforms.filtered.* {tissue_path}')
 
     else:
         print('\tone or more input files missing or empty. Isoforms not defined')

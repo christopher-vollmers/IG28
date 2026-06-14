@@ -13,6 +13,7 @@ import time
 import pysam
 import multiprocessing as mupro
 
+rng = np.random.default_rng(seed=66) # Execute order 66!
 
 #def call_variants(infile,genome,root,out_temp):
 #    os.system(f'samtools addreplacerg -O bam -r "@RG\tID:1\tSM:sample_name" -o {out_temp}{root}.fixed.bam {infile} > /dev/null 2>&1')
@@ -427,7 +428,7 @@ def collect_reads(reads, peak_areas,side):
                         if histo_bases[bound][0]<=500:
                             histo_bases[bound][1].append([name, dirn])
                         else:
-                            m = np.random.randint(histo_bases[bound][0])          # 0…t‑1
+                            m = rng.integers(histo_bases[bound][0])
                             if m < 500:
                                 histo_bases[bound][1][m]=[name, dirn]
 
@@ -555,9 +556,7 @@ def get_loci(infile,out_tmp,minCount,numThreads):
     mupro.set_start_method('fork', force=True)
     pool = mupro.Pool(min(numThreads,5))
     for tissue_chrom in tissue_chromosomes:
-#        print(f'submitted {tissue_chrom} for splitting', end='\r')
         pool.apply_async(process_chromosome,[tissue_chrom,infile,out_tmp,minCount], error_callback=error_handler)
-#        process_chromosome(tissue_chrom,infile,out_tmp,minCount)
     pool.close()
     pool.join()
 
@@ -583,15 +582,14 @@ def process_chromosome(chrom,infile,out_tmp,minCount):
     with pysam.AlignmentFile(infile,ignore_truncation=True) as bam:
         for aln in bam.fetch(chrom):
             if aln.is_unmapped or aln.is_secondary or aln.is_supplementary or aln.mapping_quality<30:
-                continue  # skip unmapped reads for overlap logic
+                continue
             previous_chrom=chrom
-            start = aln.reference_start            # 0-based leftmost coordinate
+            start = aln.reference_start
             end = aln.reference_end
             direction='+'
             if aln.is_reverse:
                 direction='-'
 
-                # reference_start + aligned length
             if start>previous_end[direction]:
                 new[direction]=True
             if not new[direction]:
@@ -668,7 +666,7 @@ def get_chromosomes(infile,out_tmp,fastaList):
                     outDict[name]=root
                 fh.close()
                 reads=[]
-            reads.append(line)   ### bug in v4.0.0. Left the first read in each locus unused
+            reads.append(line)
             previous_chrom=chrom
             previous_end=end
             previous_start=start
@@ -707,7 +705,6 @@ def characterize_splicing_event(a,junctions,CSs):
     for cs,genomePosition in CSs:
         bases,left,right = getCSaroundSS(cs,genomePosition,splice_left,splice_right)
         basecontext['all'] += 1
-#        if bases == 'gtag' or bases == 'ctac':
         if bases in junctions:
             basecontext['allowed'] += 1
         else:
@@ -961,57 +958,19 @@ def sort_reads_into_splice_junctions(splice_dict, infile, multi_exon_only,overha
                 if not failed:
 
                         pass_counter+=1
-#                    if identity.split('_')[1] != '':
                         if identity not in start_end_dict:
                             start_end_dict[identity] = [[],0]
                         start_end_dict[identity][1]+=1
                         if start_end_dict[identity][1]<=10000:
                             start_end_dict[identity][0].append((start, end,
                                                                 read_direction))
-                        m = np.random.randint(start_end_dict[identity][1])          # 0…t‑1
+                        m = rng.integers(start_end_dict[identity][1])
                         if m < 10000:
                             start_end_dict[identity][0][m]=(start, end,
                                                                 read_direction)
 
 
 
-#                    else:
-#                        if identity not in start_end_dict_mono:
-#                            start_end_dict_mono[identity] = [[],0]
-#                        start_end_dict_mono[identity][1]+=1
-#                        if start_end_dict_mono[identity][1]<=10000:
-#                            start_end_dict_mono[identity][0].append((start, end,
-#                                                                read_direction))
-#                        m = np.random.randint(start_end_dict_mono[identity][1])          # 0…t‑1
-#                        if m < 10000:
-#                            start_end_dict_mono[identity][0][m]=(start, end,
-#                                                                read_direction)
-
-#    for identity in start_end_dict_mono:
-#        iso_counter = 0
-#        new_identity = identity + 'Mono' + str(iso_counter)
-#        for direction in ['+','-']:
-#            previous_end = 0
-#            positions = start_end_dict_mono[identity][0]
-#            for position in sorted(positions):
-#                start = position[0]
-#                end = position[1]
-#                read_direction=position[2]
-#                if direction==read_direction:
-#                    if start > previous_end:
-#                        iso_counter += 1
-#                        new_identity = identity + 'Mono' + str(iso_counter)
-#                        if new_identity not in start_end_dict:
-#                            start_end_dict[new_identity] = [[],0]
-#                        start_end_dict[new_identity][1]+=1
-#                        start_end_dict[new_identity][0].append(position)
-#                        previous_end = end
-#                    else:
-#                        if new_identity not in start_end_dict:
-#                            start_end_dict[new_identity] = [[],0]
-#                        start_end_dict[new_identity][1]+=1
-#                        start_end_dict[new_identity][0].append(position)
-#                        previous_end = max(end, previous_end)
 
     return start_end_dict
 
@@ -1117,7 +1076,6 @@ def define_start_end_sites(start_end_dict,upstream_buffer,downstream_buffer,mini
                         left = start_dict[int(start)]
                         right = end_dict[int(end)]
                         new_identity = identity + '_' + read_direction + '_' + str(left) + '_' + str(right)
-#                        new_identity2 = identity + '_' + opposite_direction + '_' + str(left) + '_' + str(right)
                         if new_identity in IsoDict:
                             if sample not in IsoDict[new_identity][2]:
                                 IsoDict[new_identity][2][sample]=0
@@ -1130,8 +1088,6 @@ def define_start_end_sites(start_end_dict,upstream_buffer,downstream_buffer,mini
                                 m = np.random.randint(IsoDict[new_identity][1])          # 0…t‑1
                                 if m < 10000:
                                     IsoDict[new_identity][0][m] = read
-#                        elif new_identity2 in IsoDict:
-#                            print('opposite')
 
     return IsoDict
 
@@ -1356,4 +1312,3 @@ def get_count(isoform_list, chromosome, psl_dict):
     return count
 
 
-#def split_consensus(sequences):

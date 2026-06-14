@@ -21,7 +21,7 @@ trimmedBases=args.trimmedBases
 
 def removePolyA(seq):
     reverse = seq[::-1]
-    Astate, Astretch, Vstretch, trimPos = False, 0, 0, 0
+    Astart,Astate, Astretch, Vstretch, trimPos = False,False, 0, 0, 0
     for pos in range(0, len(reverse), 1):
         base = reverse[pos]
         if not Astate:
@@ -29,6 +29,7 @@ def removePolyA(seq):
                 Astretch += 1
                 if Astretch == 6:
                     Astate = True
+                    Astart = True
                     lastA = pos
             else:
                 Astretch=0
@@ -44,6 +45,8 @@ def removePolyA(seq):
             if Vstretch >= 3:
                 trimPos = lastA
                 break
+        if pos>30 and not Astart:
+           break
     reverseTrim = reverse[trimPos:]
     seqTrim = reverseTrim[::-1]
     return seqTrim, Astate
@@ -54,11 +57,15 @@ def main():
     if len(sys.argv)>3:
         trim=trimmedBases.split(',')
         fivePrime=int(trim[0])
-        threePrime=-int(trim[1])
+        threePrime=int(trim[1])
     out=open(outFile,'w')
     for name,seq,qual in mappy.fastx_read(inFile):
+
         if trim:
-            seq=seq[fivePrime:threePrime]
+            if threePrime==0:
+                seq=seq[fivePrime:]
+            else:
+                seq=seq[fivePrime:-threePrime]
         seqTrim,Astate=removePolyA(seq)
         out.write('>'+name+'\n'+seqTrim+'\n')
     out.close()

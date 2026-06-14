@@ -36,6 +36,8 @@ def modifyMetaData(bamFile,fastaInfo,metaData):
             if cell in mapping:
 #                print(cell,mapping[cell])
                 a[2]=mapping[cell]
+            else:
+                a[2]='None'
             outInfo.write('\t'.join(a)+'\n')
 
     print('rewriting bam file')
@@ -46,11 +48,11 @@ def modifyMetaData(bamFile,fastaInfo,metaData):
             cell,tissue,name,*rest=read_name.split('|')
             if cell in mapping:
                 tissue = mapping[cell]
-                read_name = f'{cell}|{tissue}|{name}'
-                aln.query_name = read_name
-                outbam.write(aln)
             else:
-                outbam.write(aln)
+                tissue = 'None'
+            read_name = f'{cell}|{tissue}|{name}'
+            aln.query_name = read_name
+            outbam.write(aln)
 
         outbam.close()
     os.system(f'mv {fastaInfo}.tmp {fastaInfo}')
