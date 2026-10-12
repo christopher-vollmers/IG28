@@ -53,7 +53,7 @@ parser.add_argument(
 )
 parser.add_argument('-i', '--minimum_internal_ratio', type=str, default='1')
 parser.add_argument(
-    '-R', '--minimum_reads', type=str, default='5',
+    '-R', '--minimum_reads', type=str, default='3',
     help='''Minimum number of reads to make an isoform (default 5)'''
 )
 
@@ -407,6 +407,8 @@ if 'C' in Modules:
     if len(tissueList)==1:
         tissueList=[]
     tissueList.append('Combined')
+    tissueList=['Combined']  # take back out
+
 
     for tissue in tissueList:
         print(f'Processing: {tissue}')
