@@ -249,11 +249,15 @@ At this point, you can cluster your cells into celltypes in whatever way you ple
 
 The only thing you will need your scRNA workflow to do is produce a metadata tab delimited file with the following format:
 
+
 ```bash
 Cell_ID1	Celltype1
 Cell_ID2	Celltype2
 Cell_ID3	Celltype1
 ```
+
+An example for a Seurat based workflow used for a Kinnex experiment covering 7 10X runs/replicates can be found [here](docs/kinnex_allexperiments_seurat.md)
+
 ### Run Module M to modify IG28 metadata ###
 
 After Module G finishes, and you ran your scRNA workflow of choice and generate a metadata file you can run Module M (-M M) to modify IG28 metadata.
