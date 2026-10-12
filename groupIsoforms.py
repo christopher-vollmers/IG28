@@ -68,28 +68,10 @@ def read_annotation(genome_annotation):
                         geneDict[direction][gene_name][1].add((left,right))
 
 
-        for direction in ['+','-']:
-            print('\t\t\treading genes on',direction,'strand')
-            total=len(geneDict[direction])
-            current=0
-            for gene,coords in geneDict[direction].items():
-                current+=1
-                print('\t\t\t'+str(current),'of',total,str(round((current/total)*100,2))+'%'+' '*40,end='\r')
-                chromosome=coords[0]
-                for exon in coords[1]:
-                    start=exon[0]
-                    end=exon[1]
-                    if chromosome not in coordDict[direction]:
-                        coordDict[direction][chromosome]={}
-                    for i in range(start,end,2):
-                        if i not in coordDict[direction][chromosome]:
-                            coordDict[direction][chromosome][i]=set()
-                        coordDict[direction][chromosome][i].add(gene)
-            print('\n')
-        return coordDict
+        return geneDict
 
 
-def group_isoforms(infile,coordDict):
+def group_isoforms(infile,geneDict):
     outDict={}
     isoforms=[]
     new=False
@@ -105,11 +87,13 @@ def group_isoforms(infile,coordDict):
         outDict={}
         isoforms=[]
         new=False
+        new_chrom=False
         previous_chrom=''
         previous_start=0
         previous_end=0
         roots=set()
         isoform_count=0
+        coordDict={}
         for line in open(infile):
             a=line.strip().split('\t')
             isodirection=a[5]
@@ -125,13 +109,12 @@ def group_isoforms(infile,coordDict):
                 print('\t\t\t'+str(current),'of',isoform_count,str(round((current/isoform_count)*100,2))+'%'+' '*40,end='\r')
 
                 chrom=a[1]
-
-
                 start=int(a[6])
                 end=int(a[-1])
 
                 if chrom!=previous_chrom:
                     new=True
+                    new_chrom=True
                 else:
                     if start>previous_end:
                         new=True
@@ -140,19 +123,35 @@ def group_isoforms(infile,coordDict):
                         isoforms.append(line)
                 if new:
                     if isoforms:
-                        locus,i2g = match_isoforms(isoforms,previous_chrom,previous_start,previous_end,direction,locus,i2g)
+                        locus,i2g = match_isoforms(isoforms,previous_chrom,previous_start,previous_end,direction,locus,i2g,coordDict)
                     isoforms=[]
                     isoforms.append(line)
                     previous_chrom=chrom
                     previous_end=end
                     previous_start=start
+                    if new_chrom:
+                        coordDict={}
+                        for gene,coords in geneDict[direction].items():
+                            chromosome=coords[0]
+                            if chromosome==previous_chrom
+                                for exon in coords[1]:
+                                    start=exon[0]
+                                    end=exon[1]
+                                    if chromosome not in coordDict[direction]:
+                                        coordDict[direction][chromosome]={}
+                                    for i in range(start,end,2):
+                                        if i not in coordDict[direction][chromosome]:
+                                            coordDict[direction][chromosome][i]=set()
+                                        coordDict[direction][chromosome][i].add(gene)
+
                     new=False
+                    new_chrom=False
         if isoforms:
-            locus,i2g = match_isoforms(isoforms,previous_chrom,previous_start,previous_end,direction,locus,i2g)
+            locus,i2g = match_isoforms(isoforms,previous_chrom,previous_start,previous_end,direction,locus,i2g,coordDict)
         print('\n')
     return i2g
 
-def match_isoforms(isoforms,previous_chrom,previous_start,previous_end,direction,locus,i2g):
+def match_isoforms(isoforms,previous_chrom,previous_start,previous_end,direction,locus,i2g,coordDict):
     genes={}
     covered=set()
     for line in isoforms:
@@ -238,9 +237,9 @@ def add_gene(inFile,outFile,i2g):
     out.close()
 
 print('\t\tparsing genome annotation')
-coordDict=read_annotation(genome_annotation)
+geneDict=read_annotation(genome_annotation)
 print('\t\tprocessing isoforms')
-i2g=group_isoforms(infile,coordDict)
+i2g=group_isoforms(infile,geneDict)
 print('\tconverting psl to gtf')
 psl_to_gtf(infile,gtffile,i2g)
 print(f'\tadding genes to quantFiles')
