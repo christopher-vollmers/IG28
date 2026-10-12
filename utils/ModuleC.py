@@ -100,6 +100,7 @@ def add_cds(isoforms_gtf,reference_corrected_isoforms,genome_annotation,out_file
     for transcript_id,features in gtfDict.items():
         CDSstart=False
         boundaries=[]
+        source='None'
         for Gchromosome,Gstart,Gend,type1,splitLine in features:
             if type1=='exon':
                 boundaries.append(Gstart)
@@ -114,9 +115,9 @@ def add_cds(isoforms_gtf,reference_corrected_isoforms,genome_annotation,out_file
         t_start=min(boundaries)
         t_end=max(boundaries)
         direction=features[0][4][6]
-
+        useTD2=False
         if transcript_id in match_dict:
-            AnnotMatch+=1
+#            AnnotMatch+=1
             (start,end),CDSlength=match_dict[transcript_id]
             CDSstart, CDSend=start,end
             if direction=='+':
@@ -127,23 +128,33 @@ def add_cds(isoforms_gtf,reference_corrected_isoforms,genome_annotation,out_file
                 stop_codon=[CDSstart-3,CDSstart-1]
             source = 'Annotation'
 
-        elif transcript_id in TD2_dict:
-            TD2Match+=1
+        if transcript_id in TD2_dict:
+#            TD2Match+=1
             start,end=TD2_dict[transcript_id]
+            TD2length=end-start
 
-            if direction == '+':
-                CDSstart = coords[start-1]
+            if source=='None':
+                useTD2=True
+            elif source=='Annotation' and TD2length>CDSlength:
+                useTD2=True
+            if useTD2:
+                TD2Match+=1
+                if direction == '+':
+                    CDSstart = coords[start-1]
 #                print(len(coords),end-1,transcript_id)
-                CDSend = coords[end-1]
-                start_codon=[CDSstart,CDSstart+2]
-                stop_codon=[CDSend-2,CDSend]
-            elif direction=='-':
-                revCoords=coords[::-1]
-                CDSstart = revCoords[end-1]
-                CDSend = revCoords[start-1]
-                start_codon=[CDSend-2,CDSend]
-                stop_codon=[CDSstart,CDSstart+2]
-            source='TD2'
+                    CDSend = coords[end-1]
+                    start_codon=[CDSstart,CDSstart+2]
+                    stop_codon=[CDSend-2,CDSend]
+                elif direction=='-':
+                    revCoords=coords[::-1]
+                    CDSstart = revCoords[end-1]
+                    CDSend = revCoords[start-1]
+                    start_codon=[CDSend-2,CDSend]
+                    stop_codon=[CDSstart,CDSstart+2]
+                source='TD2'
+
+            else:
+                AnnotMatch+=1
 
         CDS=False
         Stop=False
