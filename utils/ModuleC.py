@@ -101,11 +101,12 @@ def add_cds(isoforms_gtf,reference_corrected_isoforms,genome_annotation,out_file
         CDSstart=False
         boundaries=[]
         source='None'
+        exon_count=0
         for Gchromosome,Gstart,Gend,type1,splitLine in features:
             if type1=='exon':
                 boundaries.append(Gstart)
                 boundaries.append(Gend)
-
+                exon_count+=1
         boundaries=sorted(boundaries)
         coords=[]
         for i in range(0,len(boundaries),2):
@@ -117,72 +118,71 @@ def add_cds(isoforms_gtf,reference_corrected_isoforms,genome_annotation,out_file
         direction=features[0][4][6]
         useTD2=False
         if transcript_id in match_dict:
-#            AnnotMatch+=1
             (start,end),CDSlength=match_dict[transcript_id]
             CDSstart, CDSend=start,end
+            source = 'Annotation'
+
+        if transcript_id in TD2_dict:
+            start,end=TD2_dict[transcript_id]
+            TD2length=(end-start)-2
+
+            if source=='None':
+                useTD2=True
+            elif source=='Annotation':
+                if TD2length>CDSlength:
+                    useTD2=True
+            if useTD2:
+                TD2Match+=1
+                if direction=='-':
+                    revCoords=coords[::-1]
+                    CDSstart = revCoords[end-1] + 3
+                    CDSend = revCoords[start-1]
+
+                else:
+                    CDSstart = coords[start-1]
+                    CDSend = coords[end-1] - 3
+                source='TD2'
+
+        if source == 'Annotation':
+            AnnotMatch+=1
+        elif source == 'TD2':
+            TD2Match+=1
+
+        if CDSstart:
             if direction=='+':
                 start_codon=[CDSstart,CDSstart+2]
                 stop_codon=[CDSend+1,CDSend+3]
             if direction=='-':
                 start_codon=[CDSend-2,CDSend]
                 stop_codon=[CDSstart-3,CDSstart-1]
-            source = 'Annotation'
-
-        if transcript_id in TD2_dict:
-#            TD2Match+=1
-            start,end=TD2_dict[transcript_id]
-            TD2length=end-start
-
-            if source=='None':
-                useTD2=True
-            elif source=='Annotation' and TD2length>CDSlength:
-                useTD2=True
-            if useTD2:
-                TD2Match+=1
-                if direction == '+':
-                    CDSstart = coords[start-1]
-#                print(len(coords),end-1,transcript_id)
-                    CDSend = coords[end-1]
-                    start_codon=[CDSstart,CDSstart+2]
-                    stop_codon=[CDSend-2,CDSend]
-                elif direction=='-':
-                    revCoords=coords[::-1]
-                    CDSstart = revCoords[end-1]
-                    CDSend = revCoords[start-1]
-                    start_codon=[CDSend-2,CDSend]
-                    stop_codon=[CDSstart,CDSstart+2]
-                source='TD2'
-
-            else:
-                AnnotMatch+=1
 
         CDS=False
         Stop=False
         for Gchromosome,Gstart,Gend,type1,splitLine in features:
             out.write('\t'.join(splitLine)+';\n')
 
-            if not Stop:
-              if type1=='exon':
-                if CDSstart:
-                    start=Gstart
-                    end=Gend
-                    if Gstart<=start_codon[0]<=Gend:
-                        newLine=list(splitLine)
-                        newLine[1:5] = [source, 'start_codon', str(start_codon[0]), str(start_codon[1])]
-                        out.write('\t'.join(newLine)+';\n')
-                    if Gstart<=CDSstart<=Gend:
-                        start=CDSstart
-                        CDS=True
-                    if Gstart<=CDSend<=Gend:
-                        end=CDSend
-                        Stop=True
-                    if CDS:
-                        splitLine[1:5]=source,'CDS',str(start),str(end)
-                        out.write('\t'.join(splitLine)+';\n')
-                    if Gstart<=stop_codon[0]<=Gend:
-                        newLine=list(splitLine)
-                        newLine[1:5]=source,'stop_codon',str(stop_codon[0]),str(stop_codon[1])
-                        out.write('\t'.join(newLine)+';\n')
+            if CDSstart:
+                if type1=='exon':
+                    if not Stop:
+                        start=Gstart
+                        end=Gend
+                        if Gstart<=start_codon[0]<=Gend:
+                            newLine=list(splitLine)
+                            newLine[1:5] = [source, 'start_codon', str(start_codon[0]), str(start_codon[1])]
+                            out.write('\t'.join(newLine)+';\n')
+                        if Gstart<=CDSstart<=Gend:
+                            start=CDSstart
+                            CDS=True
+                        if Gstart<=CDSend<=Gend:
+                            end=CDSend
+                            Stop=True
+                        if CDS:
+                            splitLine[1:5]=source,'CDS',str(start),str(end)
+                            out.write('\t'.join(splitLine)+';\n')
+                        if Gstart<=stop_codon[0]<=Gend:
+                            newLine=list(splitLine)
+                            newLine[1:5]=source,'stop_codon',str(stop_codon[0]),str(stop_codon[1])
+                            out.write('\t'.join(newLine)+';\n')
     print(f'\t\t{AnnotMatch} isoforms were match with a CDS from the annotation')
     print(f'\t\t{TD2Match} isoforms received a CDS generated by TD2')
     out.close()
@@ -254,7 +254,7 @@ def match_gtf(input_file,feature,cds_dict):
         gene_id=entry[8].split('gene_id "')[1].split('"')[0]
         bases=set()
         for i in range(0,len(boundaries),2):
-            for pos in range(boundaries[i],boundaries[i+1],1):
+            for pos in range(boundaries[i],boundaries[i+1]+1,1):
                 bases.add(pos)
 
 
@@ -265,7 +265,7 @@ def match_gtf(input_file,feature,cds_dict):
                     cds_set.add(tuple(cds))
                     cds_bases=set()
                     for i in range(0,len(cds),2):
-                        for pos in range(cds[i],cds[i+1],1):
+                        for pos in range(cds[i],cds[i+1]+1,1):
                             cds_bases.add(pos)
                     compare_bases=set()
                     cds_min=min(cds_bases)
