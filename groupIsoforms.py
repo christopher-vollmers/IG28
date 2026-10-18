@@ -131,9 +131,10 @@ def group_isoforms(infile,geneDict):
                     previous_start=start
                     if new_chrom:
                         coordDict={}
+                        coordDict[direction]={}
                         for gene,coords in geneDict[direction].items():
                             chromosome=coords[0]
-                            if chromosome==previous_chrom
+                            if chromosome==previous_chrom:
                                 for exon in coords[1]:
                                     start=exon[0]
                                     end=exon[1]
