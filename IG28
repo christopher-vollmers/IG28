@@ -407,7 +407,8 @@ if 'C' in Modules:
     if len(tissueList)==1:
         tissueList=[]
     tissueList.append('Combined')
-    tissueList=['Combined']  # take back out
+    tissueList=tissueList[::-1]
+#    tissueList=['Combined']  # take back out
 
 
     for tissue in tissueList:
