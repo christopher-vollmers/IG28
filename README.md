@@ -41,7 +41,7 @@ Isoform  models (.gtf) and quantification (.quant for read counts and .rpms for 
 
 ## Overview ##
 
-IG28 contains several modules that are run sequentially by default (ADC) to define, align, and quantify high-quality isoforms.
+IG28 contains several modules that are run sequentially by default (AD) to identify and quantify high-quality isoforms.
 
 ## Download ##
 Just navigate to the folder you want Mandalorion to live and git clone the repository
@@ -82,7 +82,7 @@ in your PATH.
 
 ## PolyA tail removal ##
 
-IG28 requires reads that have no adapter sequences (trimmed), no polyA tails, and are in 5'->3' orientation. By default, C3POa (v3) does trim reads but doesn't do polyA removal and, depending on the adapters used, may not put reads in 5'->3' orientation..   
+IG28 requires reads that have no adapter sequences (trimmed), no polyA tails, and are in 5'->3' orientation. Some data may not be polyA trimmed by default and may not be in 5'->3' orientation..   
 Therefore the removePolyA.py script in utils/ should be used to get both PacBio (depending on preprocessing) and R2C2 reads ready.
 The script first removes a fixed number of bases (can't be zero because we aren't very good at programming) from the ends of the read and then removes the polyA tail on the 3' end of the read. Depending on the polyA position it will also reorient the read in 5'->3' direction.
 
@@ -163,9 +163,9 @@ Here is a full list of options that you can use to modify IG28 behavior:
   -j JUNCTIONS, --junctions JUNCTIONS
                         base context required (in lower-case for either strand) to call unannotated splice junctions (default gtag,gcag,atac,ctac,ctgc,gtat)
   -M MODULES, --Modules MODULES
-                        Defines what modules of IG28 will be run. By default this includes: A - Alignment, D - defining isoforms, C - Adding CDS G - Make single cell gene expression matrix M - Modify meta data (mostly a single cell thing)
+                        Defines what modules of IG28 will be run. A - Alignment, D - defining isoforms, C - Adding CDS G - Make single cell gene expression matrix M - Modify meta data (mostly a single cell thing)
                         Each module needs the output of the modules run before it to function properly. Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole
-                        pipeline. (default ADC)
+                        pipeline. (default AD)
   -v, --version         Prints IG28 version
 
 ```

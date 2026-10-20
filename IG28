@@ -118,15 +118,15 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    '-M', '--Modules', default='ADC',
-    help='''Defines what modules of IG28 will be run. By default this includes:
+    '-M', '--Modules', default='AD',
+    help='''Defines what modules of IG28 will be run.
             A - Alignment,
             D - defining isoforms,
             C - Adding CDS
             G - Make single cell gene expression matrix
             M - Modify meta data (mostly a single cell thing)
             Each module needs the output of the modules run before it to function properly.
-            Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole pipeline. (default ADC)'''
+            Running individual modules can be useful if you want to for example filter with different parameters without rerunning the whole pipeline. (default AD)'''
 )
 
 
