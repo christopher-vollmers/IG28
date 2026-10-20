@@ -45,21 +45,70 @@ anno <- AnnotationDbi::select(
 # Annotate the mitochondrial genes.
 mito_ensembl <- unique(anno$GENEID[anno$SEQNAME == "MT"])
 mito_features <- gene_ids[genes_stripped %in% mito_ensembl]
+
+# Calculate the percentage of mitochondrial genes.
+pbmc[["percent.mt"]] <- PercentageFeatureSet(pbmc, features = mito_features)
+pbmc[["is.mt.gene"]] <- rownames(pbmc) %in% mito_ensembl
+
+# Visualize QC metrics as a violin plot.
+VlnPlot(pbmc, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 ```
 
 ## Standard processing
 
 For the first part of our analysis, we followed the workflow described in the R vignette [Seurat - Guided Clustering Tutorial](https://satijalab.org/seurat/articles/pbmc3k_tutorial) from the Seurat v5 website.\
 We performed:\
--Cell filtering based on number of genes (nFeature) per cell (we kept cells with a number of gene between 350 and 4000)
-and percentage of mitochondrial genes (percent.mt) (we kept cell with less than 20% mitochondrial genes);\
+-Cell filtering based on number of genes (nFeature) per cell, keeping cells with a number of gene between 350 and 4000,
+and percentage of mitochondrial genes (percent.mt), keeping cells with less than 20% mitochondrial genes;\
 -Data normalization (used the "LogNormalize" method);\
 -Identified the top 2000 most variable features;\
 -Scaled the data;\
--Peformed linear dimensional reduction with PCA;\
--Determine the 'dimesionality' of the dataset with the elbow plot method;\
+-Performed linear dimensional reduction with PCA;\
+-Determine the 'dimensionality' of the dataset with the elbow plot method;\
 -Cluster the cells;\
 -Performed non-linear dimensional reduction with UMAP.\
+
+## Cell filtering.
+``` r
+pbmc_subset <- subset(pbmc, subset = nFeature_RNA > 350 & nFeature_RNA < 4000 & percent.mt < 20)
+```
+
+## Data normalization.
+``` r
+pbmc_subset <- NormalizeData(pbmc_subset, normalization.method = "LogNormalize", scale.factor = 10000)
+```
+
+## Identification of highly variable features.
+``` r
+pbmc_subset <- FindVariableFeatures(pbmc_subset, selection.method = "vst", nfeatures = 2000)
+```
+
+# Scaling gene expression.
+``` r
+all.genes <- rownames(pbmc_subset)
+pbmc_subset <- ScaleData(pbmc_subset, features = all.genes)
+```
+
+# Linear dimensionality reduction with PCA.
+``` r
+pbmc_subset <- RunPCA(pbmc_subset, features = VariableFeatures(object = pbmc_subset))
+```
+
+## Determination of the dataset "dimensionality".
+``` r
+ElbowPlot(pbmc_subset)
+```
+
+## Cluster cells.
+``` r
+pbmc_subset <- FindNeighbors(pbmc_subset, dims = 1:11, reduction = "pca")
+pbmc_subset <- FindClusters(pbmc_subset, resolution = 0.5, cluster.name = "unintegrated_clusters")
+```
+
+# Non linear dimensionality reduction with UMAP.
+``` r
+pbmc_subset <- RunUMAP(pbmc_subset, dims = 1:11, reduction = "pca", reduction.name = "umap.unintegrated")
+```
 
 ## Automatic cell type assignment with ScType on uncorrected data.
 ``` r
