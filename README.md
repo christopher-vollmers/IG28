@@ -105,16 +105,16 @@ Running with default settings:
 IG28 -p . -g gencodeV29.gtf -G hg38.fasta -f Consensus_reads.fofn
 ```
 
-.fofn file structure is simply a text file with one line per input fasta/fastq/bam file that contains the path to the file and a tab separated sample name and a tab separated tissue name.
-Reads from each unique sample will be combined for quantification. Reads from each tissue will be used to make separate isoform gtf/quant/rmps files -- in addition to a gtf/quant/rpms using all reads. 
+.fofn file structure is simply a text file with one line per input fasta/fastq/bam file that contains the path to the file and a tab separated sample name and a tab separated group name.
+Reads from each unique sample will be combined for quantification. Reads from each group will be used to make separate isoform gtf/quant/rmps files -- in addition to a gtf/quant/rpms using all reads. 
 
 
 You can mix and match fasta/fastq that are gzipped or not as well as bam files. 
 
 ```bash
-/path/to/file1.fasta	sample1	tissue1
-/path/to/file2.bam	sample2	tissue2
-/path/to/file4.fastq.gz	sample1	tissue1
+/path/to/file1.fasta	sample1	group1
+/path/to/file2.bam	sample2	group2
+/path/to/file4.fastq.gz	sample1	group1
 ```
 
 Here is a full list of options that you can use to modify IG28 behavior:
@@ -179,18 +179,18 @@ output_dir
 │   ├── Isoforms.filtered.clean.gtf
 │   ├── Isoforms.filtered.clean.genes.quant
 │   └── Isoforms.filtered.clean.genes.rpms
-├── Tissue1
+├── Group1
 │   ├── Isoforms.filtered.clean.gtf
 │   ├── Isoforms.filtered.clean.genes.quant
 │   └── Isoforms.filtered.clean.genes.rpms
-└── Tissue2
+└── Group2
     ├── Isoforms.filtered.clean.gtf
     ├── Isoforms.filtered.clean.genes.quant
     └── Isoforms.filtered.clean.genes.rpms
 ```
 
 
-For each tissue and all data combined, IG28 will generate the following output files in their respective output directories
+For each group and all data combined, IG28 will generate the following output files in their respective output directories
 
 Isoforms.filtered.clean.gtf: Isoform structures with small indels removed
 
@@ -225,7 +225,7 @@ You sample sheet.fofn should be structured as follows
 First column should contain the absulte path to your (unaligned) bam files. 
 Second column should contain 'scRNA' to tell IG28 that this is single cell data and it has to parse this column. 
 In the first line 'flcDNA1' would become the root name for each cell followed by what was in the bam file under the 'CB' tag
-If the bam file has a different tag, just change it in the sample sheet.
+If the bam file has a different tag, just change it in the sample sheet. The root name (in this example 'flcDNA') should not contain underscores '_' because a standard Seurat step is to separate this root name and treat it as an experiment ID. That can then be used to harmonize a dataset containing more than one experiment/root name. 
  
 ### Run Module A to parse and align reads ###
 
@@ -243,9 +243,7 @@ IG28 -p ./ -g gencodeV49.gtf -G hg38.fasta -f scRNA_sampleSheet.fofn -M G
 
 The matrix it produces can go straight in Seurat or what ever your scRNA analysis pipeline of choice is. 
 
-We have a vignette for a public PBMC Kinnex data set here.
-
-At this point, you can cluster your cells into celltypes in whatever way you please - go nuts. 
+At this point, you can cluster your cells into cell types in whatever way you please - go nuts. 
 
 The only thing you will need your scRNA workflow to do is produce a metadata tab delimited file with the following format:
 
@@ -266,7 +264,7 @@ After Module G finishes, and you ran your scRNA workflow of choice and generate 
 IG28 -p ./ -g gencodeV49.gtf -G hg38.fasta -f scRNA_sampleSheet.fofn -M M -x metadata.tsv
 ```
 
-In that way you prepare IG28 to create independent transcriptomes for each cell type in your data. 
+In that way you prepare IG28 to create independent transcriptomes for each cell type in your data, i.e. use cell types as the equivalent of groups in bulk data. 
 
 ### Run Module D and C as you would for bulk data ###
 
